@@ -8,6 +8,9 @@ import OlView from 'ol/View';
 import OlVectorLayer from 'ol/layer/Vector';
 import OlVectorSource from 'ol/source/Vector';
 import OlGeoJSON from 'ol/format/GeoJSON';
+import OlImageLayer from 'ol/layer/Image';
+import OlStatic from 'ol/source/ImageStatic';
+import OlProjection from 'ol/proj/Projection';
 
 import { fromLonLat } from 'ol/proj';
 
@@ -20,18 +23,41 @@ import { fromLonLat } from 'ol/proj';
 export class MapComponent implements OnInit {
 
   map: OlMap;
-  source: OlVectorSource;
-  layer: OlVectorLayer;
+  vectorsource: OlVectorSource;
+  vectorlayer: OlVectorLayer;
   view: OlView;
+  xyzsource: OlXYZ;
+  tilelayer: OlTileLayer;
+  imagelayer: OlImageLayer;
+  static: OlStatic;
+  projection: OlProjection;
 
   ngOnInit() {
-    this.source = new OlVectorSource({
+    const extent = [-20, 12, 116, 80];
+    this.static = new OlStatic({
+      url: 'assets/images/edrielcanvasmap.png',
+      projection: this.projection,
+      imageExtent: extent
+    });
+
+    this.imagelayer = new OlImageLayer({
+      source: this.static
+    });
+    this.xyzsource = new OlXYZ({
+      url: 'assets/images/edrielcanvasmap.png'
+    });
+
+    this.tilelayer = new OlTileLayer({
+      source: this.xyzsource
+    });
+
+    this.vectorsource = new OlVectorSource({
       url: 'assets/geojson/edriel.geojson',
       format: new OlGeoJSON()
     });
 
-    this.layer = new OlVectorLayer({
-      source: this.source
+    this.vectorlayer = new OlVectorLayer({
+      source: this.vectorsource
     });
 
     this.view = new OlView({
@@ -42,7 +68,7 @@ export class MapComponent implements OnInit {
 
     this.map = new OlMap({
       target: 'map',
-      layers: [this.layer],
+      layers: [this.imagelayer, this.vectorlayer],
       view: this.view
     });
   }

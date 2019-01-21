@@ -1,9 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 
+import { Observable } from 'rxjs';
 
 import OlMap from 'ol/Map';
-import OlXYZ from 'ol/source/XYZ';
-import OlTileLayer from 'ol/layer/Tile';
 import OlView from 'ol/View';
 import OlVectorLayer from 'ol/layer/Vector';
 import OlVectorSource from 'ol/source/Vector';
@@ -13,6 +12,8 @@ import OlStatic from 'ol/source/ImageStatic';
 import OlProjection from 'ol/proj/Projection';
 
 import { fromLonLat } from 'ol/proj';
+import {AngularFireDatabase} from '@angular/fire/database';
+import {map} from 'rxjs/operators';
 
 @Component({
   selector: 'app-map',
@@ -22,20 +23,27 @@ import { fromLonLat } from 'ol/proj';
 
 export class MapComponent implements OnInit {
 
+  items: Observable<any[]>;
   map: OlMap;
   vectorsource: OlVectorSource;
   vectorlayer: OlVectorLayer;
   view: OlView;
-  xyzsource: OlXYZ;
-  tilelayer: OlTileLayer;
   imagelayer: OlImageLayer;
   static: OlStatic;
   projection: OlProjection;
+constructor(db: AngularFireDatabase) {
+this.items = db.list('provinces').valueChanges();
 
+db.list('provinces').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
+  console.log(res);
+});
+
+}
   ngOnInit() {
+
     const extent = [-20, 12, 116, 80];
     this.static = new OlStatic({
-      url: 'assets/images/edrielcanvasmap.png',
+      url: 'assets/images/edrielcanvasmap.jpg',
       projection: this.projection,
       imageExtent: extent
     });
@@ -43,18 +51,12 @@ export class MapComponent implements OnInit {
     this.imagelayer = new OlImageLayer({
       source: this.static
     });
-    this.xyzsource = new OlXYZ({
-      url: 'assets/images/edrielcanvasmap.png'
-    });
-
-    this.tilelayer = new OlTileLayer({
-      source: this.xyzsource
-    });
 
     this.vectorsource = new OlVectorSource({
       url: 'assets/geojson/edriel.geojson',
       format: new OlGeoJSON()
     });
+
 
     this.vectorlayer = new OlVectorLayer({
       source: this.vectorsource

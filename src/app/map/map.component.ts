@@ -1,7 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-
-import { Observable } from 'rxjs';
-
 import OlMap from 'ol/Map';
 import OlView from 'ol/View';
 import OlVectorLayer from 'ol/layer/Vector';

@@ -14,7 +14,7 @@ import {click, pointerMove, altKeyOnly} from 'ol/events/condition';
 import {AngularFireDatabase} from '@angular/fire/database';
 import {map} from 'rxjs/operators';
 import {getWidth} from 'ol/extent';
-import OlColor from 'ol/color';
+
 
 @Component({
   selector: 'app-map',
@@ -45,56 +45,9 @@ export class MapComponent implements OnInit {
 }
 
   ngOnInit() {
-    const highlightStyle = new Style({
-      stroke: new Stroke({
-        color: '#f00',
-        width: 1
-      }),
-      fill: new Fill({
-        color: 'rgba(255,0,0,0.1)'
-      }),
-      text: new Text({
-        font: '12px Calibri,sans-serif',
-        fill: new Fill({
-          color: '#000'
-        }),
-        stroke: new Stroke({
-          color: '#f00',
-          width: 3
-        })
-      })
-    });
-    const labelStyle = new Style({
-      geometry: function(feature) {
-        let geometry = feature.getGeometry();
-        if (geometry.getType() === 'MultiPolygon') {
-          // Only render label for the widest polygon of a multipolygon
-          const polygons = geometry.getPolygons();
-          let widest = 0;
-          for (let i = 0, ii = polygons.length; i < ii; ++i) {
-            const polygon = polygons[i];
-            const width = getWidth(polygon.getExtent());
-            if (width > widest) {
-              widest = width;
-              geometry = polygon;
-            }
-          }
-        }
-        return geometry;
-      },
-      text: new Text({
-        font: '12px Calibri,sans-serif',
-        overflow: true,
-        fill: new Fill({
-          color: '#000'
-        }),
-        stroke: new Stroke({
-          color: '#fff',
-          width: 3
-        })
-      })
-    });
-    this.labelstyle = labelStyle;
+    this.loadProvinceData();
+
+
     const extent = [-20, 12, 116, 80];
     this.static = new OlStatic({
       url: 'assets/images/edrielcanvasmap.jpg',
@@ -111,50 +64,10 @@ export class MapComponent implements OnInit {
       format: new OlGeoJSON()
     });
 
-    const countryStyle = new Style({
-      fill: new Fill({
-        color: 'rgba(255, 255, 255, 0.6)'
-      }),
-      stroke: new Stroke({
-        color: '#319FD3',
-        width: 1
-      })
-    });
-
-    const style = [countryStyle, labelStyle];
-
     this.vectorlayer = new OlVectorLayer({
       source: this.vectorsource,
-      style: function (feature) {
-        labelStyle.getText().setText(feature.get('name') + ':' + feature.get('id'));
-        return style;
-
-      },
       declutter: true
     });
-
-    this.highlightOverlay = new OlVectorLayer({
-      source: new OlVectorSource(),
-      map: this.map,
-      style: function(feature) {
-        this.highlightStyle.getText().setText(feature.get('name'));
-        return highlightStyle;
-      }
-    });
-
-
-    this.db.list('provinces').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
-      console.log(typeof res);
-      this.provincenames = res;
-      this.addMapData(this.provincenames);
-    });
-    this.db.list('sovereignties').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
-      console.log(typeof res);
-      this.sovereignties = res;
-      this.addMapSovereignties(this.sovereignties);
-
-    });
-
 
 
     this.view = new OlView({
@@ -258,9 +171,7 @@ export class MapComponent implements OnInit {
 
         const ownerid = event.get('owner');
         event.set('sovereignty', factiondata[ownerid].name, true);
-
-
-        labelStyle.getText().setText(event.get('name')+ ':' + event.get('id'));
+        labelStyle.getText().setText(event.get('name') + ':' + event.get('id'));
         const provinceStyle = [styles[event.get('owner')], labelStyle];
         event.setStyle(provinceStyle);
 
@@ -268,6 +179,20 @@ export class MapComponent implements OnInit {
 
       layer.refresh();
     }
+  }
+loadProvinceData() {
+  this.db.list('provinces').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
+    this.provincenames = res;
+    this.addMapData(this.provincenames);
+    this.loadFactionData();
+  });
+}
+  loadFactionData() {
+    this.db.list('sovereignties').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
+      this.sovereignties = res;
+      this.addMapSovereignties(this.sovereignties);
+
+    });
   }
 
 

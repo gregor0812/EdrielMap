@@ -14,6 +14,7 @@ import {click, pointerMove, altKeyOnly} from 'ol/events/condition';
 import {AngularFireDatabase} from '@angular/fire/database';
 import {map} from 'rxjs/operators';
 import {getWidth} from 'ol/extent';
+import OlColor from 'ol/color';
 
 @Component({
   selector: 'app-map',
@@ -32,9 +33,12 @@ export class MapComponent implements OnInit {
   projection: OlProjection;
   db: AngularFireDatabase;
   private provincenames: any[];
-  highlight: any;
   highlightOverlay: OlVectorLayer;
   select: any;
+  private sovereignties: any[];
+  private styleArray: any[] = [];
+  labelstyle: any;
+
 
   constructor(db: AngularFireDatabase) {
     this.db = db;
@@ -90,6 +94,7 @@ export class MapComponent implements OnInit {
         })
       })
     });
+    this.labelstyle = labelStyle;
     const extent = [-20, 12, 116, 80];
     this.static = new OlStatic({
       url: 'assets/images/edrielcanvasmap.jpg',
@@ -121,7 +126,7 @@ export class MapComponent implements OnInit {
     this.vectorlayer = new OlVectorLayer({
       source: this.vectorsource,
       style: function (feature) {
-        labelStyle.getText().setText(feature.get('name'));
+        labelStyle.getText().setText(feature.get('name') + ':' + feature.get('id'));
         return style;
 
       },
@@ -140,10 +145,14 @@ export class MapComponent implements OnInit {
 
     this.db.list('provinces').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
       console.log(typeof res);
-
       this.provincenames = res;
-    //  console.log(this.provincenames);
-      this.addMapFeatures(this.provincenames);
+      this.addMapData(this.provincenames);
+    });
+    this.db.list('sovereignties').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
+      console.log(typeof res);
+      this.sovereignties = res;
+      this.addMapSovereignties(this.sovereignties);
+
     });
 
 
@@ -168,17 +177,98 @@ export class MapComponent implements OnInit {
 
     });
   }
-  addMapFeatures(provincenames: any[]) {
+
+
+  addMapData(mapData: any[]) {
     const layer = this.vectorlayer.getSource();
     if (layer.getState() === 'ready') {
-      console.log(provincenames);
-      layer.forEachFeature(function(event) {
 
-        event.set('name', provincenames[event.get('id')].name, true);
+      layer.forEachFeature(function(event) {
+        event.set('name', mapData[event.get('id')].name, true);
+        event.set('owner', mapData[event.get('id')].owner, true);
       });
       layer.refresh();
     }
 }
+  addMapSovereignties(factiondata: any[]) {
+    this.sovereignties.forEach( (e) => {
+      const sovereignColour = new Style({
+        fill: new Fill({
+          color: e.colour
+        }),
+        stroke: new Stroke({
+          color: '#000000',
+          width: 1
+        }),
+        fillOpacity: '0.6',
+
+
+        text: new Text({
+          font: '12px Calibri,sans-serif',
+          overflow: true,
+          fill: new Fill({
+            color: '#000'
+          }),
+          stroke: new Stroke({
+            color: '#fff',
+            width: 3
+          })
+        })
+      });
+      const style = [sovereignColour];
+
+      this.styleArray.push(sovereignColour);
+    });
+
+    const layer = this.vectorlayer.getSource();
+    if (layer.getState() === 'ready') {
+      const styles = this.styleArray;
+      layer.forEachFeature((event) => {
+        const labelStyle = new Style({
+          geometry: function(feature) {
+            let geometry = feature.getGeometry();
+            if (geometry.getType() === 'MultiPolygon') {
+              // Only render label for the widest polygon of a multipolygon
+              const polygons = geometry.getPolygons();
+              let widest = 0;
+              for (let i = 0, ii = polygons.length; i < ii; ++i) {
+                const polygon = polygons[i];
+                const width = getWidth(polygon.getExtent());
+                if (width > widest) {
+                  widest = width;
+                  geometry = polygon;
+                }
+              }
+            }
+            return geometry;
+          },
+          text: new Text({
+            font: '12px Calibri,sans-serif',
+            overflow: true,
+            fill: new Fill({
+              color: '#000'
+            }),
+            stroke: new Stroke({
+              color: '#fff',
+              width: 3
+            })
+          })
+        });
+
+
+        const ownerid = event.get('owner');
+        event.set('sovereignty', factiondata[ownerid].name, true);
+
+
+        labelStyle.getText().setText(event.get('name')+ ':' + event.get('id'));
+        const provinceStyle = [styles[event.get('owner')], labelStyle];
+        event.setStyle(provinceStyle);
+
+      });
+
+      layer.refresh();
+    }
+  }
 
 
 

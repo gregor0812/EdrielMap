@@ -8,6 +8,7 @@ import { MapComponent } from './map/map.component';
 import {AngularFireModule} from '@angular/fire';
 import {environment} from '../environments/environment';
 import {AngularFireDatabaseModule} from '@angular/fire/database';
+import {MatToolbarModule} from '@angular/material/toolbar';
 
 @NgModule({
   declarations: [
@@ -20,7 +21,8 @@ import {AngularFireDatabaseModule} from '@angular/fire/database';
     MatButtonModule,
     MatCheckboxModule,
     AngularFireModule.initializeApp(environment.firebase),
-    AngularFireDatabaseModule
+    AngularFireDatabaseModule,
+    MatToolbarModule
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -47,7 +47,6 @@ export class MapComponent implements OnInit {
   ngOnInit() {
     this.loadProvinceData();
 
-
     const extent = [-20, 12, 116, 80];
     this.static = new OlStatic({
       url: 'assets/images/edrielcanvasmap.jpg',
@@ -72,8 +71,12 @@ export class MapComponent implements OnInit {
 
     this.view = new OlView({
       projection: 'EPSG:4326',
-      center: [68, 46],
-      zoom: 4
+      center: [50, 42],
+      zoom: 14,
+      maxZoom: 23,
+      resolution: 0.06,
+      maxResolution: 0.07,
+      extent: [-20, 12, 116, 80]
     });
 
     this.map = new OlMap({

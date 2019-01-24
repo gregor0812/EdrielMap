@@ -24,78 +24,36 @@ import {getWidth} from 'ol/extent';
 
 export class MapComponent implements OnInit {
 
+  test: string;
   map: OlMap;
-  vectorsource: OlVectorSource;
   vectorlayer: OlVectorLayer;
-  view: OlView;
   imagelayer: OlImageLayer;
   static: OlStatic;
   projection: OlProjection;
   db: AngularFireDatabase;
   private provincenames: any[];
-  highlightOverlay: OlVectorLayer;
   select: any;
-  private sovereignties: any[];
+  sovereignties: any[];
   private styleArray: any[] = [];
-  labelstyle: any;
 
 
   constructor(db: AngularFireDatabase) {
     this.db = db;
-}
+  }
 
   ngOnInit() {
-    this.loadProvinceData();
-
-    const extent = [-20, 12, 116, 80];
-    this.static = new OlStatic({
-      url: 'assets/images/edrielcanvasmap.jpg',
-      projection: this.projection,
-      imageExtent: extent
+  this.initalizeMap();
+    this.loadProvinceData().then((e) => {
+      console.log('And this?' + e)
+      return this.addMapData(e);
     });
+    this.loadFactionData().then( (e) => this.addMapSovereignties(e));
 
-    this.imagelayer = new OlImageLayer({
-      source: this.static
-    });
-
-    this.vectorsource = new OlVectorSource({
-      url: 'assets/geojson/edriel.geojson',
-      format: new OlGeoJSON()
-    });
-
-    this.vectorlayer = new OlVectorLayer({
-      source: this.vectorsource,
-      declutter: true
-    });
-
-
-    this.view = new OlView({
-      projection: 'EPSG:4326',
-      center: [50, 42],
-      zoom: 14,
-      maxZoom: 23,
-      resolution: 0.06,
-      maxResolution: 0.07,
-      extent: [-20, 12, 116, 80]
-    });
-
-    this.map = new OlMap({
-      target: 'map',
-      layers: [this.imagelayer, this.vectorlayer],
-      view: this.view
-    });
-
-    this.select = new Select({
-      condition: click
-    });
-    this.map.addInteraction(this.select, (e) => {
-      e.target.getFeatures().getLength();
-
-    });
   }
 
 
-  addMapData(mapData: any[]) {
+  addMapData(mapData) {
+console.log('Adding map data?' + this.provincenames);
     const layer = this.vectorlayer.getSource();
     if (layer.getState() === 'ready') {
 
@@ -105,9 +63,9 @@ export class MapComponent implements OnInit {
       });
       layer.refresh();
     }
-}
-  addMapSovereignties(factiondata: any[]) {
-    this.sovereignties.forEach( (e) => {
+  }
+  addMapSovereignties(factiondata) {
+    factiondata.forEach( (e) => {
       const sovereignColour = new Style({
         fill: new Fill({
           color: e.colour
@@ -131,7 +89,6 @@ export class MapComponent implements OnInit {
           })
         })
       });
-      const style = [sovereignColour];
 
       this.styleArray.push(sovereignColour);
     });
@@ -183,20 +140,68 @@ export class MapComponent implements OnInit {
       layer.refresh();
     }
   }
-loadProvinceData() {
-  this.db.list('provinces').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
-    this.provincenames = res;
-    this.addMapData(this.provincenames);
-    this.loadFactionData();
-  });
-}
+  loadProvinceData() {
+    return new Promise((resolve, reject) => {
+        this.db.list('provinces').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
+          this.provincenames = res;
+          return resolve(res);
+        });
+
+    });
+
+  }
   loadFactionData() {
+    return new Promise((resolve, reject) => {
     this.db.list('sovereignties').valueChanges().pipe(map(res => res.map(eachLabel => eachLabel))).subscribe(res => {
       this.sovereignties = res;
-      this.addMapSovereignties(this.sovereignties);
+      console.log(res);
+      return resolve(res);
+    });
 
     });
   }
+  initalizeMap() {
+    this.test = 'test';
+    console.log(this.test);
+    this.imagelayer = new OlImageLayer({
+      source: new OlStatic({
+        url: 'assets/images/edrielcanvasmap.jpg',
+        projection: this.projection,
+        imageExtent: [-20, 12, 116, 80]
+      })
+    });
+    this.vectorlayer = new OlVectorLayer({
+      source: new OlVectorSource({
+        url: 'assets/geojson/edriel.geojson',
+        format: new OlGeoJSON()
+      }),
+      declutter: true
+    });
+
+    this.map = new OlMap({
+      target: 'map',
+      layers: [this.imagelayer, this.vectorlayer],
+      view: new OlView({
+        projection: 'EPSG:4326',
+        center: [50, 42],
+        zoom: 14,
+        minZoom: 5,
+        maxZoom: 23,
+        resolution: 0.06,
+        maxResolution: 0.07,
+        extent: [-20, 12, 116, 80]
+      })
+    });
+
+    this.select = new Select({
+      condition: click
+    });
+    this.map.addInteraction(this.select, (e) => {
+      e.target.getFeatures().getLength();
+
+    });
+  }
+
 
 
 
